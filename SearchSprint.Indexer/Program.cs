@@ -1,10 +1,20 @@
+using System.Net.Http.Headers;
+using System.Text;
 using Elastic.Clients.Elasticsearch;
 using Elastic.Transport;
 using Microsoft.AspNetCore.Mvc;
 using OpenAI.Embeddings;
 using OpenAI.Chat;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using SearchSprint.Indexer;
 using SearchSprint.Indexer.Services;
+
+// Load .env.local — traverse up from current dir so it works from IDE too
+DotNetEnv.Env.TraversePath().Load(".env.local");
+
+// Enable OpenAI SDK built-in telemetry (traces chat + embedding calls)
+AppContext.SetSwitch("OpenAI.Experimental.EnableOpenTelemetry", true);
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -32,6 +42,36 @@ builder.Services.AddSingleton<IEmbeddingService, EmbeddingService>();
 builder.Services.AddScoped<ISearchService, SearchService>();
 builder.Services.AddScoped<IRagChatService, RagChatService>();
 builder.Services.AddScoped<IDocumentIndexerService, DocumentIndexerService>();
+
+var langfuseConfig = builder.Configuration.GetSection("Langfuse");
+var langfusePublicKey = Environment.GetEnvironmentVariable("LANGFUSE_PUBLIC_KEY")
+    ?? langfuseConfig["PublicKey"] ?? "";
+var langfuseSecretKey = Environment.GetEnvironmentVariable("LANGFUSE_SECRET_KEY")
+    ?? langfuseConfig["SecretKey"] ?? "";
+var langfuseHost = Environment.GetEnvironmentVariable("LANGFUSE_HOST")
+    ?? langfuseConfig["Host"] ?? "https://langfuse.nawedx.dev";
+
+
+var langfuseCredentials = Convert.ToBase64String(
+    Encoding.UTF8.GetBytes($"{langfusePublicKey}:{langfuseSecretKey}"));
+
+builder.Services.AddOpenTelemetry()
+    .ConfigureResource(r => r.AddService("SearchSprint.Indexer"))
+    .WithTracing(tracing =>
+    {
+        tracing
+            .AddAspNetCoreInstrumentation()
+            .AddSource("OpenAI")
+            .AddSource("OpenAI.*")
+            .AddSource(Telemetry.SourceName);
+    });
+
+builder.Services.AddHttpClient<ILangfuseService, LangfuseService>(client =>
+{
+    client.BaseAddress = new Uri(langfuseHost);
+    client.DefaultRequestHeaders.Authorization =
+        new AuthenticationHeaderValue("Basic", langfuseCredentials);
+});
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
