@@ -28,7 +28,7 @@ public class RagChatService : IRagChatService
 
         var messages = new List<ChatMessage>
         {
-            new SystemChatMessage("You are a helpful movie expert. Answer the user's question using ONLY the provided context. If the answer isn't in the context, say 'I don't know'."),
+            new SystemChatMessage("You are a helpful movie expert. Answer the user's question using ONLY the provided context. If a movie in the context is relevant to the question — even if the topic is just mentioned in the plot rather than the central theme — include it in your answer. Only say 'I don't know' if the context contains absolutely no relevant information."),
             new UserChatMessage($@"
 Context:
 {contextText}

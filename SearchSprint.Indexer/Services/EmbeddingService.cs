@@ -16,4 +16,10 @@ public class EmbeddingService : IEmbeddingService
         var result = await _embeddingClient.GenerateEmbeddingAsync(text);
         return result.Value.ToFloats().ToArray();
     }
+
+    public async Task<float[][]> GenerateEmbeddingsAsync(string[] texts)
+    {
+        var result = await _embeddingClient.GenerateEmbeddingsAsync(texts);
+        return result.Value.Select(e => e.ToFloats().ToArray()).ToArray();
+    }
 }

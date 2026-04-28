@@ -1,3 +1,5 @@
+namespace SearchSprint.Indexer;
+
 public class Movie
 {
     public int Id { get; set; }

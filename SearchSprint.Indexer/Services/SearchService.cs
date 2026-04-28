@@ -1,5 +1,6 @@
 using Elastic.Clients.Elasticsearch;
 using Microsoft.Extensions.Configuration;
+using SearchSprint.Indexer;
 
 namespace SearchSprint.Indexer.Services;
 
